@@ -356,7 +356,7 @@
 
     .leave-item {
       display: grid;
-      grid-template-columns: minmax(130px, 1fr) 150px auto;
+      grid-template-columns: minmax(130px, 1fr) 130px 42px;
       gap: 10px;
       align-items: center;
       padding: 10px;
@@ -367,6 +367,7 @@
 
     .leave-date {
       font-weight: 800;
+      min-width: 0;
     }
 
     .delete-button {
@@ -405,9 +406,33 @@
         align-self: flex-start;
       }
 
-      .date-row,
-      .leave-item {
+      .date-row {
         grid-template-columns: 1fr;
+      }
+
+      .leave-item {
+        grid-template-columns: minmax(82px, 1fr) 92px 34px;
+        gap: 6px;
+        padding: 8px;
+      }
+
+      .leave-date {
+        font-size: 13px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .leave-item select {
+        min-height: 34px;
+        padding: 5px 6px;
+        font-size: 13px;
+      }
+
+      .delete-button {
+        min-height: 34px;
+        padding: 0;
+        font-size: 16px;
       }
 
       .day {
@@ -512,9 +537,9 @@
   <script>
     const STORAGE_KEY = "annual-leave-planner-v1";
     const leaveTypes = {
-      full: { label: "휴가", value: 1 },
-      half: { label: "반일 휴가", value: 0.5 },
-      quarter: { label: "반반일 휴가", value: 0.25 }
+      full: { label: "연차", value: 1 },
+      half: { label: "반차", value: 0.5 },
+      quarter: { label: "반반차", value: 0.25 }
     };
 
     const els = {
@@ -601,6 +626,15 @@
       return new Intl.DateTimeFormat("ko-KR", {
         year: "numeric",
         month: "long",
+        day: "numeric",
+        weekday: "short"
+      }).format(date);
+    }
+
+    function formatShortDate(dateKey) {
+      const date = new Date(`${dateKey}T00:00:00`);
+      return new Intl.DateTimeFormat("ko-KR", {
+        month: "numeric",
         day: "numeric",
         weekday: "short"
       }).format(date);
@@ -710,14 +744,15 @@
 
         const date = document.createElement("div");
         date.className = "leave-date";
-        date.textContent = formatDate(item.date);
+        date.textContent = formatShortDate(item.date);
+        date.title = formatDate(item.date);
 
         const select = document.createElement("select");
         select.setAttribute("aria-label", `${formatDate(item.date)} 연차 종류`);
         Object.entries(leaveTypes).forEach(([type, config]) => {
           const option = document.createElement("option");
           option.value = type;
-          option.textContent = `${config.label} (${config.value}일)`;
+          option.textContent = config.label;
           select.append(option);
         });
         select.value = item.type;
@@ -728,7 +763,8 @@
         const del = document.createElement("button");
         del.type = "button";
         del.className = "delete-button";
-        del.textContent = "삭제";
+        del.setAttribute("aria-label", `${formatDate(item.date)} 삭제`);
+        del.textContent = "x";
         del.addEventListener("click", () => deleteLeave(item.id));
 
         li.append(date, select, del);
