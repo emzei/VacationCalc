@@ -227,9 +227,32 @@
       font-size: 22px;
     }
 
+    .calendar-controls {
+      display: flex;
+      align-items: end;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
     .calendar-nav {
       display: flex;
       gap: 8px;
+    }
+
+    .add-type-field {
+      min-width: 120px;
+    }
+
+    .add-type-field label {
+      margin-bottom: 5px;
+      font-size: 12px;
+    }
+
+    .add-type-field select {
+      min-height: 42px;
+      padding: 8px 9px;
+      font-weight: 800;
     }
 
     .month-button {
@@ -427,6 +450,10 @@
         align-self: flex-start;
       }
 
+      .calendar-controls {
+        justify-content: flex-start;
+      }
+
       .date-row {
         grid-template-columns: 1fr;
       }
@@ -521,12 +548,18 @@
         <div class="calendar-header">
           <div>
             <h2 id="monthTitle"></h2>
-            <p class="hint">날짜를 더블클릭하면 휴가가 추가됩니다.</p>
+            <p class="hint">날짜를 클릭하면 추가되고, 추가된 날짜는 더블클릭하면 삭제됩니다.</p>
           </div>
-          <div class="calendar-nav">
-            <button class="month-button" id="prevMonth" type="button" aria-label="지난달">&lt;</button>
-            <button class="month-button" id="todayMonth" type="button" aria-label="이번 달">오늘</button>
-            <button class="month-button" id="nextMonth" type="button" aria-label="다음달">&gt;</button>
+          <div class="calendar-controls">
+            <div class="add-type-field">
+              <label for="addLeaveType">추가 종류</label>
+              <select id="addLeaveType"></select>
+            </div>
+            <div class="calendar-nav">
+              <button class="month-button" id="prevMonth" type="button" aria-label="지난달">&lt;</button>
+              <button class="month-button" id="todayMonth" type="button" aria-label="이번 달">오늘</button>
+              <button class="month-button" id="nextMonth" type="button" aria-label="다음달">&gt;</button>
+            </div>
           </div>
         </div>
 
@@ -577,6 +610,7 @@
       prevMonth: document.querySelector("#prevMonth"),
       todayMonth: document.querySelector("#todayMonth"),
       nextMonth: document.querySelector("#nextMonth"),
+      addLeaveType: document.querySelector("#addLeaveType"),
       calendarGrid: document.querySelector("#calendarGrid"),
       leaveList: document.querySelector("#leaveList"),
       emptyMessage: document.querySelector("#emptyMessage"),
@@ -596,6 +630,7 @@
         totalDays: 15,
         yearStart: toDateKey(new Date(currentYear - 1, 11, 20)),
         yearEnd: toDateKey(new Date(currentYear, 11, 19)),
+        selectedLeaveType: "full",
         leaves: []
       };
     }
@@ -615,6 +650,7 @@
         totalDays: Number.isFinite(Number(raw.totalDays)) ? Number(raw.totalDays) : fallback.totalDays,
         yearStart: isDateKey(raw.yearStart) ? raw.yearStart : fallback.yearStart,
         yearEnd: isDateKey(raw.yearEnd) ? raw.yearEnd : fallback.yearEnd,
+        selectedLeaveType: leaveTypes[raw.selectedLeaveType] ? raw.selectedLeaveType : fallback.selectedLeaveType,
         leaves: normalizeLeaves(raw.leaves)
       };
     }
@@ -706,6 +742,7 @@
       els.totalDays.value = state.totalDays;
       els.yearStart.value = state.yearStart;
       els.yearEnd.value = state.yearEnd;
+      els.addLeaveType.value = state.selectedLeaveType;
 
       const used = usedTotal();
       const remaining = state.totalDays - used;
@@ -745,7 +782,7 @@
         const hasLeave = items.length > 0;
         const canAddLeave = selectable && !hasLeave;
         button.disabled = !selectable;
-        button.setAttribute("aria-label", canAddLeave ? `${formatDate(dateKey)} 휴가 추가` : `${formatDate(dateKey)} ${selectable ? "이미 연차 추가됨" : "선택 불가"}`);
+        button.setAttribute("aria-label", canAddLeave ? `${formatDate(dateKey)} ${leaveTypes[state.selectedLeaveType].label} 추가` : `${formatDate(dateKey)} ${selectable ? "더블클릭하여 삭제" : "선택 불가"}`);
         if (date.getMonth() !== month) button.classList.add("outside");
         if (!selectable) button.classList.add("unavailable");
         if (dateKey === toDateKey(today)) button.classList.add("today");
@@ -771,7 +808,9 @@
         }
 
         if (canAddLeave) {
-          button.addEventListener("dblclick", () => addLeave(dateKey));
+          button.addEventListener("click", () => addLeave(dateKey));
+        } else if (hasLeave) {
+          button.addEventListener("dblclick", () => deleteLeaveByDate(dateKey));
         }
         els.calendarGrid.append(button);
       }
@@ -823,7 +862,7 @@
       state.leaves.push({
         id: crypto.randomUUID(),
         date: dateKey,
-        type: "full"
+        type: state.selectedLeaveType
       });
       render();
     }
@@ -835,6 +874,11 @@
 
     function deleteLeave(id) {
       state.leaves = state.leaves.filter((item) => item.id !== id);
+      render();
+    }
+
+    function deleteLeaveByDate(dateKey) {
+      state.leaves = state.leaves.filter((item) => item.date !== dateKey);
       render();
     }
 
@@ -865,6 +909,18 @@
 
     els.yearEnd.addEventListener("input", () => {
       state.yearEnd = els.yearEnd.value;
+      render();
+    });
+
+    Object.entries(leaveTypes).forEach(([type, config]) => {
+      const option = document.createElement("option");
+      option.value = type;
+      option.textContent = config.label;
+      els.addLeaveType.append(option);
+    });
+
+    els.addLeaveType.addEventListener("change", () => {
+      state.selectedLeaveType = els.addLeaveType.value;
       render();
     });
 
