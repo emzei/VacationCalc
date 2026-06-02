@@ -1,0 +1,807 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>연차 소진 계획</title>
+  <style>
+    :root {
+      --bg: #f7f8fb;
+      --panel: #ffffff;
+      --text: #17202a;
+      --muted: #667085;
+      --line: #d9dee8;
+      --primary: #1f6feb;
+      --primary-soft: #e8f1ff;
+      --danger: #c32020;
+      --danger-soft: #fff0f0;
+      --ok: #11845b;
+      --shadow: 0 12px 30px rgba(24, 36, 55, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+    }
+
+    .page {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 32px 0 48px;
+    }
+
+    header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 4vw, 40px);
+      line-height: 1.1;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .reset-button {
+      min-width: 96px;
+      padding: 10px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--text);
+      box-shadow: 0 2px 8px rgba(24, 36, 55, 0.04);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 330px minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .settings {
+      padding: 18px;
+      position: sticky;
+      top: 18px;
+    }
+
+    .section-title {
+      margin: 0 0 14px;
+      font-size: 18px;
+    }
+
+    .field {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #344054;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .stepper {
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr) 44px;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .stepper button,
+    .month-button {
+      height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f9fafc;
+      color: var(--text);
+      font-size: 20px;
+    }
+
+    input[type="number"],
+    input[type="date"],
+    select {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      padding: 9px 10px;
+    }
+
+    input:focus,
+    select:focus,
+    button:focus-visible {
+      outline: 3px solid rgba(31, 111, 235, 0.18);
+      outline-offset: 2px;
+    }
+
+    .date-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .error {
+      display: none;
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 8px;
+      background: var(--danger-soft);
+      color: var(--danger);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .error.visible {
+      display: block;
+    }
+
+    .summary {
+      display: grid;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .metric {
+      padding: 14px;
+      border-radius: 8px;
+      background: #f5f7fb;
+      border: 1px solid #e8ebf2;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 5px;
+    }
+
+    .metric strong {
+      font-size: 26px;
+      line-height: 1;
+    }
+
+    .metric.remaining strong {
+      color: var(--ok);
+    }
+
+    .metric.remaining.negative {
+      background: var(--danger-soft);
+      border-color: #ffd0d0;
+    }
+
+    .metric.remaining.negative strong {
+      color: var(--danger);
+    }
+
+    .calendar-panel {
+      overflow: hidden;
+    }
+
+    .calendar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .calendar-header h2 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    .calendar-nav {
+      display: flex;
+      gap: 8px;
+    }
+
+    .month-button {
+      width: 42px;
+      display: inline-grid;
+      place-items: center;
+    }
+
+    .calendar {
+      padding: 16px 18px 18px;
+    }
+
+    .weekdays,
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .weekday {
+      color: var(--muted);
+      text-align: center;
+      font-size: 13px;
+      font-weight: 700;
+      padding-bottom: 6px;
+    }
+
+    .day {
+      min-height: 88px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 8px;
+      text-align: left;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+    }
+
+    .day:hover {
+      border-color: var(--primary);
+      background: #fbfdff;
+      transform: translateY(-1px);
+    }
+
+    .day.outside {
+      color: #a6adbb;
+      background: #f8f9fb;
+    }
+
+    .day.today {
+      border-color: var(--primary);
+      box-shadow: inset 0 0 0 1px var(--primary);
+    }
+
+    .day.has-leave {
+      background: var(--primary-soft);
+      border-color: #b7d2ff;
+    }
+
+    .day-number {
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    .day-note {
+      width: fit-content;
+      max-width: 100%;
+      border-radius: 999px;
+      background: var(--primary);
+      color: #fff;
+      padding: 3px 7px;
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .hint {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .list {
+      margin-top: 18px;
+      border-top: 1px solid var(--line);
+      padding: 18px;
+    }
+
+    .list-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .list-head h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .empty {
+      margin: 0;
+      padding: 24px;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      color: var(--muted);
+      text-align: center;
+      background: #fafbfc;
+    }
+
+    .leave-list {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .leave-item {
+      display: grid;
+      grid-template-columns: minmax(130px, 1fr) 150px auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .leave-date {
+      font-weight: 800;
+    }
+
+    .delete-button {
+      min-height: 42px;
+      border-radius: 8px;
+      background: var(--danger-soft);
+      color: var(--danger);
+      padding: 9px 12px;
+      font-weight: 800;
+    }
+
+    @media (max-width: 860px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .settings {
+        position: static;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .page {
+        width: min(100% - 20px, 1120px);
+        padding-top: 20px;
+      }
+
+      header,
+      .calendar-header,
+      .list-head {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .calendar-nav {
+        align-self: flex-start;
+      }
+
+      .date-row,
+      .leave-item {
+        grid-template-columns: 1fr;
+      }
+
+      .day {
+        min-height: 66px;
+        padding: 6px;
+      }
+
+      .day-note {
+        font-size: 11px;
+        padding: 2px 6px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div>
+        <h1>연차 소진 계획</h1>
+        <p class="subtitle">연차 정책과 사용 예정일을 저장하고, 남은 연차를 바로 확인하세요.</p>
+      </div>
+      <button class="reset-button" id="resetButton" type="button">초기화</button>
+    </header>
+
+    <div class="layout">
+      <aside class="panel settings" aria-label="연차 설정">
+        <h2 class="section-title">기본 설정</h2>
+
+        <div class="field">
+          <label for="totalDays">생성 연차 개수</label>
+          <div class="stepper">
+            <button id="minusDay" type="button" aria-label="연차 1개 줄이기">-</button>
+            <input id="totalDays" type="number" min="0" step="0.25" inputmode="decimal">
+            <button id="plusDay" type="button" aria-label="연차 1개 늘리기">+</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="date-row">
+            <div>
+              <label for="yearStart">연시작</label>
+              <input id="yearStart" type="date">
+            </div>
+            <div>
+              <label for="yearEnd">연마감</label>
+              <input id="yearEnd" type="date">
+            </div>
+          </div>
+          <p class="error" id="dateError">연시작은 연마감보다 이른 날짜여야 합니다.</p>
+        </div>
+
+        <div class="summary" aria-live="polite">
+          <div class="metric">
+            <span>사용 예정</span>
+            <strong id="usedDays">0일</strong>
+          </div>
+          <div class="metric remaining" id="remainingMetric">
+            <span>잔여 연차</span>
+            <strong id="remainingDays">15일</strong>
+          </div>
+        </div>
+      </aside>
+
+      <section class="panel calendar-panel" aria-label="캘린더와 연차 목록">
+        <div class="calendar-header">
+          <div>
+            <h2 id="monthTitle"></h2>
+            <p class="hint">날짜를 더블클릭하면 휴가가 추가됩니다.</p>
+          </div>
+          <div class="calendar-nav">
+            <button class="month-button" id="prevMonth" type="button" aria-label="지난달">&lt;</button>
+            <button class="month-button" id="todayMonth" type="button" aria-label="이번 달">오늘</button>
+            <button class="month-button" id="nextMonth" type="button" aria-label="다음달">&gt;</button>
+          </div>
+        </div>
+
+        <div class="calendar">
+          <div class="weekdays" aria-hidden="true">
+            <div class="weekday">일</div>
+            <div class="weekday">월</div>
+            <div class="weekday">화</div>
+            <div class="weekday">수</div>
+            <div class="weekday">목</div>
+            <div class="weekday">금</div>
+            <div class="weekday">토</div>
+          </div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+
+        <div class="list">
+          <div class="list-head">
+            <h2>추가된 연차</h2>
+            <p class="hint" id="itemCount">0건</p>
+          </div>
+          <p class="empty" id="emptyMessage">아직 추가된 연차가 없습니다.</p>
+          <ul class="leave-list" id="leaveList"></ul>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const STORAGE_KEY = "annual-leave-planner-v1";
+    const leaveTypes = {
+      full: { label: "휴가", value: 1 },
+      half: { label: "반일 휴가", value: 0.5 },
+      quarter: { label: "반반일 휴가", value: 0.25 }
+    };
+
+    const els = {
+      totalDays: document.querySelector("#totalDays"),
+      minusDay: document.querySelector("#minusDay"),
+      plusDay: document.querySelector("#plusDay"),
+      yearStart: document.querySelector("#yearStart"),
+      yearEnd: document.querySelector("#yearEnd"),
+      dateError: document.querySelector("#dateError"),
+      usedDays: document.querySelector("#usedDays"),
+      remainingDays: document.querySelector("#remainingDays"),
+      remainingMetric: document.querySelector("#remainingMetric"),
+      monthTitle: document.querySelector("#monthTitle"),
+      prevMonth: document.querySelector("#prevMonth"),
+      todayMonth: document.querySelector("#todayMonth"),
+      nextMonth: document.querySelector("#nextMonth"),
+      calendarGrid: document.querySelector("#calendarGrid"),
+      leaveList: document.querySelector("#leaveList"),
+      emptyMessage: document.querySelector("#emptyMessage"),
+      itemCount: document.querySelector("#itemCount"),
+      resetButton: document.querySelector("#resetButton")
+    };
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let visibleMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    let state = loadState();
+
+    function defaultState() {
+      const currentYear = new Date().getFullYear();
+      return {
+        totalDays: 15,
+        yearStart: toDateKey(new Date(currentYear - 1, 11, 20)),
+        yearEnd: toDateKey(new Date(currentYear, 11, 19)),
+        leaves: []
+      };
+    }
+
+    function loadState() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        return normalizeState(saved || defaultState());
+      } catch {
+        return defaultState();
+      }
+    }
+
+    function normalizeState(raw) {
+      const fallback = defaultState();
+      return {
+        totalDays: Number.isFinite(Number(raw.totalDays)) ? Number(raw.totalDays) : fallback.totalDays,
+        yearStart: isDateKey(raw.yearStart) ? raw.yearStart : fallback.yearStart,
+        yearEnd: isDateKey(raw.yearEnd) ? raw.yearEnd : fallback.yearEnd,
+        leaves: Array.isArray(raw.leaves)
+          ? raw.leaves
+              .filter((item) => isDateKey(item.date) && leaveTypes[item.type])
+              .map((item) => ({
+                id: String(item.id || crypto.randomUUID()),
+                date: item.date,
+                type: item.type
+              }))
+          : []
+      };
+    }
+
+    function persist() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function toDateKey(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    function isDateKey(value) {
+      return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(`${value}T00:00:00`).getTime());
+    }
+
+    function formatDate(dateKey) {
+      const date = new Date(`${dateKey}T00:00:00`);
+      return new Intl.DateTimeFormat("ko-KR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        weekday: "short"
+      }).format(date);
+    }
+
+    function formatDays(value) {
+      return `${Number(value.toFixed(2)).toLocaleString("ko-KR")}일`;
+    }
+
+    function isValidPeriod() {
+      return state.yearStart < state.yearEnd;
+    }
+
+    function usedTotal() {
+      return state.leaves.reduce((sum, item) => sum + leaveTypes[item.type].value, 0);
+    }
+
+    function sortedLeaves() {
+      return [...state.leaves].sort((a, b) => a.date.localeCompare(b.date));
+    }
+
+    function leavesByDate() {
+      return state.leaves.reduce((map, item) => {
+        map[item.date] = map[item.date] || [];
+        map[item.date].push(item);
+        return map;
+      }, {});
+    }
+
+    function render() {
+      els.totalDays.value = state.totalDays;
+      els.yearStart.value = state.yearStart;
+      els.yearEnd.value = state.yearEnd;
+
+      const used = usedTotal();
+      const remaining = state.totalDays - used;
+      els.usedDays.textContent = formatDays(used);
+      els.remainingDays.textContent = formatDays(remaining);
+      els.remainingMetric.classList.toggle("negative", remaining < 0);
+      els.dateError.classList.toggle("visible", !isValidPeriod());
+
+      renderCalendar();
+      renderLeaveList();
+      persist();
+    }
+
+    function renderCalendar() {
+      const year = visibleMonth.getFullYear();
+      const month = visibleMonth.getMonth();
+      els.monthTitle.textContent = new Intl.DateTimeFormat("ko-KR", {
+        year: "numeric",
+        month: "long"
+      }).format(visibleMonth);
+
+      const firstOfMonth = new Date(year, month, 1);
+      const start = new Date(year, month, 1 - firstOfMonth.getDay());
+      const leaveMap = leavesByDate();
+      els.calendarGrid.innerHTML = "";
+
+      for (let i = 0; i < 42; i += 1) {
+        const date = new Date(start);
+        date.setDate(start.getDate() + i);
+        const dateKey = toDateKey(date);
+        const items = leaveMap[dateKey] || [];
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "day";
+        button.dataset.date = dateKey;
+        button.setAttribute("aria-label", `${formatDate(dateKey)} 휴가 추가`);
+        if (date.getMonth() !== month) button.classList.add("outside");
+        if (dateKey === toDateKey(today)) button.classList.add("today");
+        if (items.length > 0) button.classList.add("has-leave");
+
+        const number = document.createElement("span");
+        number.className = "day-number";
+        number.textContent = String(date.getDate());
+        button.append(number);
+
+        items.slice(0, 2).forEach((item) => {
+          const note = document.createElement("span");
+          note.className = "day-note";
+          note.textContent = leaveTypes[item.type].label;
+          button.append(note);
+        });
+
+        if (items.length > 2) {
+          const more = document.createElement("span");
+          more.className = "day-note";
+          more.textContent = `+${items.length - 2}`;
+          button.append(more);
+        }
+
+        button.addEventListener("dblclick", () => addLeave(dateKey));
+        els.calendarGrid.append(button);
+      }
+    }
+
+    function renderLeaveList() {
+      const leaves = sortedLeaves();
+      els.leaveList.innerHTML = "";
+      els.emptyMessage.style.display = leaves.length ? "none" : "block";
+      els.itemCount.textContent = `${leaves.length}건`;
+
+      leaves.forEach((item) => {
+        const li = document.createElement("li");
+        li.className = "leave-item";
+
+        const date = document.createElement("div");
+        date.className = "leave-date";
+        date.textContent = formatDate(item.date);
+
+        const select = document.createElement("select");
+        select.setAttribute("aria-label", `${formatDate(item.date)} 연차 종류`);
+        Object.entries(leaveTypes).forEach(([type, config]) => {
+          const option = document.createElement("option");
+          option.value = type;
+          option.textContent = `${config.label} (${config.value}일)`;
+          select.append(option);
+        });
+        select.value = item.type;
+        select.addEventListener("change", () => {
+          updateLeaveType(item.id, select.value);
+        });
+
+        const del = document.createElement("button");
+        del.type = "button";
+        del.className = "delete-button";
+        del.textContent = "삭제";
+        del.addEventListener("click", () => deleteLeave(item.id));
+
+        li.append(date, select, del);
+        els.leaveList.append(li);
+      });
+    }
+
+    function addLeave(dateKey) {
+      state.leaves.push({
+        id: crypto.randomUUID(),
+        date: dateKey,
+        type: "full"
+      });
+      render();
+    }
+
+    function updateLeaveType(id, type) {
+      state.leaves = state.leaves.map((item) => item.id === id ? { ...item, type } : item);
+      render();
+    }
+
+    function deleteLeave(id) {
+      state.leaves = state.leaves.filter((item) => item.id !== id);
+      render();
+    }
+
+    function shiftMonth(offset) {
+      visibleMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + offset, 1);
+      renderCalendar();
+    }
+
+    els.minusDay.addEventListener("click", () => {
+      state.totalDays = Math.max(0, Number(state.totalDays) - 1);
+      render();
+    });
+
+    els.plusDay.addEventListener("click", () => {
+      state.totalDays = Number(state.totalDays) + 1;
+      render();
+    });
+
+    els.totalDays.addEventListener("input", () => {
+      state.totalDays = Number(els.totalDays.value || 0);
+      render();
+    });
+
+    els.yearStart.addEventListener("input", () => {
+      state.yearStart = els.yearStart.value;
+      render();
+    });
+
+    els.yearEnd.addEventListener("input", () => {
+      state.yearEnd = els.yearEnd.value;
+      render();
+    });
+
+    els.prevMonth.addEventListener("click", () => shiftMonth(-1));
+    els.nextMonth.addEventListener("click", () => shiftMonth(1));
+    els.todayMonth.addEventListener("click", () => {
+      visibleMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      renderCalendar();
+    });
+
+    els.resetButton.addEventListener("click", () => {
+      const confirmed = confirm("저장된 설정과 연차 목록을 모두 초기화할까요?");
+      if (!confirmed) return;
+      localStorage.removeItem(STORAGE_KEY);
+      state = defaultState();
+      visibleMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
