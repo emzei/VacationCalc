@@ -615,16 +615,25 @@
         totalDays: Number.isFinite(Number(raw.totalDays)) ? Number(raw.totalDays) : fallback.totalDays,
         yearStart: isDateKey(raw.yearStart) ? raw.yearStart : fallback.yearStart,
         yearEnd: isDateKey(raw.yearEnd) ? raw.yearEnd : fallback.yearEnd,
-        leaves: Array.isArray(raw.leaves)
-          ? raw.leaves
-              .filter((item) => isDateKey(item.date) && leaveTypes[item.type])
-              .map((item) => ({
-                id: String(item.id || crypto.randomUUID()),
-                date: item.date,
-                type: item.type
-              }))
-          : []
+        leaves: normalizeLeaves(raw.leaves)
       };
+    }
+
+    function normalizeLeaves(leaves) {
+      if (!Array.isArray(leaves)) return [];
+      const seenDates = new Set();
+      return leaves
+        .filter((item) => isDateKey(item.date) && leaveTypes[item.type])
+        .filter((item) => {
+          if (seenDates.has(item.date)) return false;
+          seenDates.add(item.date);
+          return true;
+        })
+        .map((item) => ({
+          id: String(item.id || crypto.randomUUID()),
+          date: item.date,
+          type: item.type
+        }));
     }
 
     function persist() {
@@ -671,6 +680,10 @@
 
     function isSelectableDate(dateKey) {
       return isValidPeriod() && dateKey >= state.yearStart && dateKey <= state.yearEnd;
+    }
+
+    function hasLeaveOnDate(dateKey) {
+      return state.leaves.some((item) => item.date === dateKey);
     }
 
     function usedTotal() {
@@ -729,12 +742,14 @@
         button.className = "day";
         button.dataset.date = dateKey;
         const selectable = isSelectableDate(dateKey);
+        const hasLeave = items.length > 0;
+        const canAddLeave = selectable && !hasLeave;
         button.disabled = !selectable;
-        button.setAttribute("aria-label", selectable ? `${formatDate(dateKey)} 휴가 추가` : `${formatDate(dateKey)} 선택 불가`);
+        button.setAttribute("aria-label", canAddLeave ? `${formatDate(dateKey)} 휴가 추가` : `${formatDate(dateKey)} ${selectable ? "이미 연차 추가됨" : "선택 불가"}`);
         if (date.getMonth() !== month) button.classList.add("outside");
         if (!selectable) button.classList.add("unavailable");
         if (dateKey === toDateKey(today)) button.classList.add("today");
-        if (items.length > 0) button.classList.add("has-leave");
+        if (hasLeave) button.classList.add("has-leave");
 
         const number = document.createElement("span");
         number.className = "day-number";
@@ -755,7 +770,7 @@
           button.append(more);
         }
 
-        if (selectable) {
+        if (canAddLeave) {
           button.addEventListener("dblclick", () => addLeave(dateKey));
         }
         els.calendarGrid.append(button);
@@ -804,6 +819,7 @@
 
     function addLeave(dateKey) {
       if (!isSelectableDate(dateKey)) return;
+      if (hasLeaveOnDate(dateKey)) return;
       state.leaves.push({
         id: crypto.randomUUID(),
         date: dateKey,
