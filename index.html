@@ -156,6 +156,22 @@
       gap: 10px;
     }
 
+    .option-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: #344054;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+
+    .option-row input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--primary);
+    }
+
     .error {
       display: none;
       margin-top: 10px;
@@ -303,6 +319,11 @@
       padding-bottom: 6px;
     }
 
+    .weekday:first-child,
+    .weekday:last-child {
+      color: var(--danger);
+    }
+
     .day {
       min-height: 88px;
       border: 1px solid var(--line);
@@ -344,6 +365,19 @@
       color: #9aa3b2;
     }
 
+    .day.rest-day {
+      color: var(--danger);
+    }
+
+    .day.rest-day:not(:disabled) {
+      border-color: #f2c5c5;
+    }
+
+    .day.rest-day.has-leave {
+      background: #fff4f4;
+      border-color: #f2aaaa;
+    }
+
     .day.today {
       border-color: var(--primary);
       box-shadow: inset 0 0 0 1px var(--primary);
@@ -370,6 +404,10 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+
+    .holiday-note {
+      background: var(--danger);
     }
 
     .hint {
@@ -556,6 +594,13 @@
           <p class="error" id="dateError">연시작은 연마감보다 이른 날짜여야 합니다.</p>
         </div>
 
+        <div class="field">
+          <label class="option-row">
+            <input id="allowHolidayLeave" type="checkbox">
+            <span>토/일/공휴일에도 연차 추가 허용</span>
+          </label>
+        </div>
+
         <div class="summary" aria-live="polite">
           <div class="metric">
             <span>사용 예정</span>
@@ -630,6 +675,7 @@
       remainingDays: document.querySelector("#remainingDays"),
       remainingMetric: document.querySelector("#remainingMetric"),
       calendarPanel: document.querySelector(".calendar-panel"),
+      allowHolidayLeave: document.querySelector("#allowHolidayLeave"),
       monthTitle: document.querySelector("#monthTitle"),
       prevMonth: document.querySelector("#prevMonth"),
       todayMonth: document.querySelector("#todayMonth"),
@@ -645,7 +691,32 @@
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    const fallbackHolidays = [
+      { date: "2025-12-25", name: "성탄절" },
+      { date: "2026-01-01", name: "신정" },
+      { date: "2026-02-16", name: "설날 연휴" },
+      { date: "2026-02-17", name: "설날" },
+      { date: "2026-02-18", name: "설날 연휴" },
+      { date: "2026-03-01", name: "삼일절" },
+      { date: "2026-03-02", name: "삼일절 대체공휴일" },
+      { date: "2026-05-05", name: "어린이날" },
+      { date: "2026-05-24", name: "부처님오신날" },
+      { date: "2026-05-25", name: "부처님오신날 대체공휴일" },
+      { date: "2026-06-03", name: "전국동시지방선거" },
+      { date: "2026-06-06", name: "현충일" },
+      { date: "2026-08-15", name: "광복절" },
+      { date: "2026-08-17", name: "광복절 대체공휴일" },
+      { date: "2026-09-24", name: "추석 연휴" },
+      { date: "2026-09-25", name: "추석" },
+      { date: "2026-09-26", name: "추석 연휴" },
+      { date: "2026-10-03", name: "개천절" },
+      { date: "2026-10-05", name: "개천절 대체공휴일" },
+      { date: "2026-10-09", name: "한글날" },
+      { date: "2026-12-25", name: "성탄절" }
+    ];
+
     let visibleMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    let holidayMap = buildHolidayMap(fallbackHolidays);
     let state = loadState();
 
     function defaultState() {
@@ -655,6 +726,7 @@
         yearStart: toDateKey(new Date(currentYear - 1, 11, 20)),
         yearEnd: toDateKey(new Date(currentYear, 11, 19)),
         selectedLeaveType: "full",
+        allowHolidayLeave: false,
         leaves: []
       };
     }
@@ -675,8 +747,43 @@
         yearStart: isDateKey(raw.yearStart) ? raw.yearStart : fallback.yearStart,
         yearEnd: isDateKey(raw.yearEnd) ? raw.yearEnd : fallback.yearEnd,
         selectedLeaveType: leaveTypes[raw.selectedLeaveType] ? raw.selectedLeaveType : fallback.selectedLeaveType,
+        allowHolidayLeave: Boolean(raw.allowHolidayLeave),
         leaves: normalizeLeaves(raw.leaves)
       };
+    }
+
+    function buildHolidayMap(holidays) {
+      return holidays.reduce((map, item) => {
+        if (isDateKey(item.date)) {
+          map[item.date] = item.name || "공휴일";
+        }
+        return map;
+      }, {});
+    }
+
+    function normalizeHolidayData(data) {
+      const rawEntries = Array.isArray(data) ? data : Array.isArray(data.holidays) ? data.holidays : Object.entries(data)
+        .filter(([, value]) => Array.isArray(value))
+        .flatMap(([year, value]) => value.map((item) => {
+          if (typeof item === "string") return { date: `${year}-${item}`, name: "공휴일" };
+          if (item && typeof item.date === "string" && item.date.length === 5) return { ...item, date: `${year}-${item.date}` };
+          return item;
+        }));
+
+      return rawEntries
+        .filter((item) => item && isDateKey(item.date))
+        .map((item) => ({ date: item.date, name: item.name || "공휴일" }));
+    }
+
+    async function loadHolidayData() {
+      try {
+        const response = await fetch("holidays.json", { cache: "no-store" });
+        if (!response.ok) throw new Error("Holiday JSON not found");
+        const data = await response.json();
+        holidayMap = buildHolidayMap(normalizeHolidayData(data));
+      } catch {
+        holidayMap = buildHolidayMap(fallbackHolidays);
+      }
     }
 
     function normalizeLeaves(leaves) {
@@ -742,6 +849,18 @@
       return isValidPeriod() && dateKey >= state.yearStart && dateKey <= state.yearEnd;
     }
 
+    function isWeekend(date) {
+      return date.getDay() === 0 || date.getDay() === 6;
+    }
+
+    function isRestDay(date, dateKey) {
+      return isWeekend(date) || Boolean(holidayMap[dateKey]);
+    }
+
+    function canUseLeaveDate(date, dateKey) {
+      return isSelectableDate(dateKey) && (state.allowHolidayLeave || !isRestDay(date, dateKey));
+    }
+
     function hasLeaveOnDate(dateKey) {
       return state.leaves.some((item) => item.date === dateKey);
     }
@@ -767,6 +886,7 @@
       els.yearStart.value = state.yearStart;
       els.yearEnd.value = state.yearEnd;
       els.addLeaveType.value = state.selectedLeaveType;
+      els.allowHolidayLeave.checked = state.allowHolidayLeave;
 
       const used = usedTotal();
       const remaining = state.totalDays - used;
@@ -804,12 +924,15 @@
         button.className = "day";
         button.dataset.date = dateKey;
         const selectable = isSelectableDate(dateKey);
+        const holidayName = holidayMap[dateKey];
+        const restDay = isRestDay(date, dateKey);
         const hasLeave = items.length > 0;
-        const canAddLeave = selectable && !hasLeave;
+        const canAddLeave = canUseLeaveDate(date, dateKey) && !hasLeave;
         button.disabled = !selectable;
-        button.setAttribute("aria-label", canAddLeave ? `${formatDate(dateKey)} ${leaveTypes[state.selectedLeaveType].label} 추가` : `${formatDate(dateKey)} ${selectable ? "더블클릭하여 삭제" : "선택 불가"}`);
+        button.setAttribute("aria-label", canAddLeave ? `${formatDate(dateKey)} ${leaveTypes[state.selectedLeaveType].label} 추가` : `${formatDate(dateKey)} ${selectable ? hasLeave ? "더블클릭하여 삭제" : "휴일 추가 불가" : "선택 불가"}`);
         if (date.getMonth() !== month) button.classList.add("outside");
         if (!selectable) button.classList.add("unavailable");
+        if (restDay) button.classList.add("rest-day");
         if (dateKey === toDateKey(today)) button.classList.add("today");
         if (hasLeave) button.classList.add("has-leave");
 
@@ -817,6 +940,13 @@
         number.className = "day-number";
         number.textContent = String(date.getDate());
         button.append(number);
+
+        if (holidayName) {
+          const holiday = document.createElement("span");
+          holiday.className = "day-note holiday-note";
+          holiday.textContent = holidayName;
+          button.append(holiday);
+        }
 
         items.slice(0, 2).forEach((item) => {
           const note = document.createElement("span");
@@ -882,7 +1012,8 @@
     }
 
     function addLeave(dateKey) {
-      if (!isSelectableDate(dateKey)) return;
+      const date = new Date(`${dateKey}T00:00:00`);
+      if (!canUseLeaveDate(date, dateKey)) return;
       if (hasLeaveOnDate(dateKey)) return;
       state.leaves.push({
         id: crypto.randomUUID(),
@@ -937,6 +1068,11 @@
       render();
     });
 
+    els.allowHolidayLeave.addEventListener("change", () => {
+      state.allowHolidayLeave = els.allowHolidayLeave.checked;
+      render();
+    });
+
     Object.entries(leaveTypes).forEach(([type, config]) => {
       const option = document.createElement("option");
       option.value = type;
@@ -965,7 +1101,7 @@
       render();
     });
 
-    render();
+    loadHolidayData().then(() => render());
   </script>
 </body>
 </html>
