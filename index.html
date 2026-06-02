@@ -238,6 +238,11 @@
       place-items: center;
     }
 
+    #todayMonth {
+      font-size: 13px;
+      font-weight: 800;
+    }
+
     .calendar {
       padding: 16px 18px 18px;
     }
@@ -277,9 +282,25 @@
       transform: translateY(-1px);
     }
 
+    .day:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
+
+    .day:disabled:hover {
+      border-color: var(--line);
+      background: #fff;
+      transform: none;
+    }
+
     .day.outside {
       color: #a6adbb;
       background: #f8f9fb;
+    }
+
+    .day.unavailable {
+      background: #f1f3f6;
+      color: #9aa3b2;
     }
 
     .day.today {
@@ -648,6 +669,10 @@
       return state.yearStart < state.yearEnd;
     }
 
+    function isSelectableDate(dateKey) {
+      return isValidPeriod() && dateKey >= state.yearStart && dateKey <= state.yearEnd;
+    }
+
     function usedTotal() {
       return state.leaves.reduce((sum, item) => sum + leaveTypes[item.type].value, 0);
     }
@@ -703,8 +728,11 @@
         button.type = "button";
         button.className = "day";
         button.dataset.date = dateKey;
-        button.setAttribute("aria-label", `${formatDate(dateKey)} 휴가 추가`);
+        const selectable = isSelectableDate(dateKey);
+        button.disabled = !selectable;
+        button.setAttribute("aria-label", selectable ? `${formatDate(dateKey)} 휴가 추가` : `${formatDate(dateKey)} 선택 불가`);
         if (date.getMonth() !== month) button.classList.add("outside");
+        if (!selectable) button.classList.add("unavailable");
         if (dateKey === toDateKey(today)) button.classList.add("today");
         if (items.length > 0) button.classList.add("has-leave");
 
@@ -727,7 +755,9 @@
           button.append(more);
         }
 
-        button.addEventListener("dblclick", () => addLeave(dateKey));
+        if (selectable) {
+          button.addEventListener("dblclick", () => addLeave(dateKey));
+        }
         els.calendarGrid.append(button);
       }
     }
@@ -773,6 +803,7 @@
     }
 
     function addLeave(dateKey) {
+      if (!isSelectableDate(dateKey)) return;
       state.leaves.push({
         id: crypto.randomUUID(),
         date: dateKey,
