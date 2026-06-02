@@ -173,6 +173,7 @@
 
     .summary {
       display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 10px;
       margin-top: 20px;
     }
@@ -227,21 +228,27 @@
       font-size: 22px;
     }
 
+    .calendar-title-group {
+      min-width: 0;
+    }
+
     .calendar-controls {
       display: flex;
       align-items: end;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      width: 100%;
     }
 
     .calendar-nav {
       display: flex;
       gap: 8px;
+      margin-top: 10px;
     }
 
     .add-type-field {
       min-width: 120px;
+      margin-left: auto;
     }
 
     .add-type-field label {
@@ -451,7 +458,13 @@
       }
 
       .calendar-controls {
+        align-items: stretch;
         justify-content: flex-start;
+        flex-direction: column;
+      }
+
+      .add-type-field {
+        margin-left: 0;
       }
 
       .date-row {
@@ -546,19 +559,18 @@
 
       <section class="panel calendar-panel" aria-label="캘린더와 연차 목록">
         <div class="calendar-header">
-          <div>
-            <h2 id="monthTitle"></h2>
-            <p class="hint">날짜를 클릭하면 추가되고, 추가된 날짜는 더블클릭하면 삭제됩니다.</p>
-          </div>
           <div class="calendar-controls">
+            <div class="calendar-title-group">
+              <h2 id="monthTitle"></h2>
+              <div class="calendar-nav">
+                <button class="month-button" id="prevMonth" type="button" aria-label="지난달">&lt;</button>
+                <button class="month-button" id="todayMonth" type="button" aria-label="이번 달">오늘</button>
+                <button class="month-button" id="nextMonth" type="button" aria-label="다음달">&gt;</button>
+              </div>
+            </div>
             <div class="add-type-field">
               <label for="addLeaveType">추가 종류</label>
               <select id="addLeaveType"></select>
-            </div>
-            <div class="calendar-nav">
-              <button class="month-button" id="prevMonth" type="button" aria-label="지난달">&lt;</button>
-              <button class="month-button" id="todayMonth" type="button" aria-label="이번 달">오늘</button>
-              <button class="month-button" id="nextMonth" type="button" aria-label="다음달">&gt;</button>
             </div>
           </div>
         </div>
