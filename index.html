@@ -212,6 +212,17 @@
 
     .calendar-panel {
       overflow: hidden;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .calendar-panel.negative {
+      background: var(--danger-soft);
+      border-color: #ffd0d0;
+    }
+
+    .calendar-panel.negative .calendar-header,
+    .calendar-panel.negative .list {
+      border-color: #ffd0d0;
     }
 
     .calendar-header {
@@ -618,6 +629,7 @@
       usedDays: document.querySelector("#usedDays"),
       remainingDays: document.querySelector("#remainingDays"),
       remainingMetric: document.querySelector("#remainingMetric"),
+      calendarPanel: document.querySelector(".calendar-panel"),
       monthTitle: document.querySelector("#monthTitle"),
       prevMonth: document.querySelector("#prevMonth"),
       todayMonth: document.querySelector("#todayMonth"),
@@ -761,6 +773,7 @@
       els.usedDays.textContent = formatDays(used);
       els.remainingDays.textContent = formatDays(remaining);
       els.remainingMetric.classList.toggle("negative", remaining < 0);
+      els.calendarPanel.classList.toggle("negative", remaining < 0);
       els.dateError.classList.toggle("visible", !isValidPeriod());
 
       renderCalendar();
