@@ -11,12 +11,55 @@
       --text: #17202a;
       --muted: #667085;
       --line: #d9dee8;
+      --label: #344054;
       --primary: #1f6feb;
       --primary-soft: #e8f1ff;
       --danger: #c32020;
       --danger-soft: #fff0f0;
+      --danger-line: #ffd0d0;
       --ok: #11845b;
+      --control-bg: #f9fafc;
+      --input-bg: #ffffff;
+      --metric-bg: #f5f7fb;
+      --metric-line: #e8ebf2;
+      --outside-text: #a6adbb;
+      --outside-bg: #f8f9fb;
+      --unavailable-bg: #f1f3f6;
+      --empty-bg: #fafbfc;
+      --rest-line: #f2c5c5;
+      --rest-leave-bg: #fff4f4;
+      --rest-leave-line: #f2aaaa;
       --shadow: 0 12px 30px rgba(24, 36, 55, 0.08);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        color-scheme: dark;
+        --bg: #101418;
+        --panel: #171c22;
+        --text: #eef2f7;
+        --muted: #9aa7b7;
+        --line: #303946;
+        --label: #d7dee8;
+        --primary: #6aa7ff;
+        --primary-soft: #19304f;
+        --danger: #ff8a8a;
+        --danger-soft: #351d22;
+        --danger-line: #69343c;
+        --ok: #5fd1a5;
+        --control-bg: #202733;
+        --input-bg: #111820;
+        --metric-bg: #202733;
+        --metric-line: #303946;
+        --outside-text: #6f7d8d;
+        --outside-bg: #151a20;
+        --unavailable-bg: #1c2229;
+        --empty-bg: #151a20;
+        --rest-line: #5b3038;
+        --rest-leave-bg: #2a1d24;
+        --rest-leave-line: #81404a;
+        --shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+      }
     }
 
     * {
@@ -109,7 +152,7 @@
     label {
       display: block;
       margin-bottom: 8px;
-      color: #344054;
+      color: var(--label);
       font-weight: 700;
       font-size: 14px;
     }
@@ -126,7 +169,7 @@
       height: 42px;
       border: 1px solid var(--line);
       border-radius: 8px;
-      background: #f9fafc;
+      background: var(--control-bg);
       color: var(--text);
       font-size: 20px;
     }
@@ -138,7 +181,7 @@
       min-height: 42px;
       border: 1px solid var(--line);
       border-radius: 8px;
-      background: #fff;
+      background: var(--input-bg);
       color: var(--text);
       padding: 9px 10px;
     }
@@ -160,7 +203,7 @@
       display: flex;
       align-items: center;
       gap: 9px;
-      color: #344054;
+      color: var(--label);
       font-size: 14px;
       font-weight: 700;
       line-height: 1.4;
@@ -197,8 +240,8 @@
     .metric {
       padding: 14px;
       border-radius: 8px;
-      background: #f5f7fb;
-      border: 1px solid #e8ebf2;
+      background: var(--metric-bg);
+      border: 1px solid var(--metric-line);
     }
 
     .metric span {
@@ -219,7 +262,7 @@
 
     .metric.remaining.negative {
       background: var(--danger-soft);
-      border-color: #ffd0d0;
+      border-color: var(--danger-line);
     }
 
     .metric.remaining.negative strong {
@@ -233,12 +276,12 @@
 
     .calendar-panel.negative {
       background: var(--danger-soft);
-      border-color: #ffd0d0;
+      border-color: var(--danger-line);
     }
 
     .calendar-panel.negative .calendar-header,
     .calendar-panel.negative .list {
-      border-color: #ffd0d0;
+      border-color: var(--danger-line);
     }
 
     .calendar-header {
@@ -328,7 +371,7 @@
       min-height: 88px;
       border: 1px solid var(--line);
       border-radius: 8px;
-      background: #fff;
+      background: var(--input-bg);
       padding: 8px;
       text-align: left;
       color: var(--text);
@@ -340,7 +383,7 @@
 
     .day:hover {
       border-color: var(--primary);
-      background: #fbfdff;
+      background: var(--control-bg);
       transform: translateY(-1px);
     }
 
@@ -351,18 +394,18 @@
 
     .day:disabled:hover {
       border-color: var(--line);
-      background: #fff;
+      background: var(--input-bg);
       transform: none;
     }
 
     .day.outside {
-      color: #a6adbb;
-      background: #f8f9fb;
+      color: var(--outside-text);
+      background: var(--outside-bg);
     }
 
     .day.unavailable {
-      background: #f1f3f6;
-      color: #9aa3b2;
+      background: var(--unavailable-bg);
+      color: var(--outside-text);
     }
 
     .day.rest-day {
@@ -370,12 +413,12 @@
     }
 
     .day.rest-day:not(:disabled) {
-      border-color: #f2c5c5;
+      border-color: var(--rest-line);
     }
 
     .day.rest-day.has-leave {
-      background: #fff4f4;
-      border-color: #f2aaaa;
+      background: var(--rest-leave-bg);
+      border-color: var(--rest-leave-line);
     }
 
     .day.today {
@@ -443,7 +486,7 @@
       border-radius: 8px;
       color: var(--muted);
       text-align: center;
-      background: #fafbfc;
+      background: var(--empty-bg);
     }
 
     .leave-list {
@@ -462,7 +505,7 @@
       padding: 10px;
       border: 1px solid var(--line);
       border-radius: 8px;
-      background: #fff;
+      background: var(--input-bg);
     }
 
     .leave-date {
